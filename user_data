@@ -1,0 +1,88 @@
+#!/bin/bash
+
+# Update the system
+yum update -y
+
+# Install Docker
+amazon-linux-extras install docker -y
+service docker start
+usermod -a -G docker ec2-user
+
+# Install dependencies for Docker Compose
+yum install -y curl jq
+
+# Install Docker Compose
+DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
+curl -L "https://github.com/docker/compose/releases/download/$DOCKER_COMPOSE_VERSION/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+
+# Install AWS CLI (optional, in case it's not already installed)
+yum install -y aws-cli
+
+# Create a Docker Compose directory and pull images from ECR
+mkdir -p /home/ec2-user/docker-compose-app
+cd /home/ec2-user/docker-compose-app
+
+# Write the docker-compose.yml file
+cat > docker-compose.yml <<EOF
+version: '3'
+services:
+  netflix-frontend:
+    image: 058264527754.dkr.ecr.us-east-1.amazonaws.com/netflix_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - MOVIE_CATALOG_SERVICE=http://netflix-catalog:8080
+    depends_on:
+      - netflix-catalog
+    networks:
+      - netflix-network
+
+  netflix-catalog:
+    image: 058264527754.dkr.ecr.us-east-1.amazonaws.com/netflix_catalog
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=netflix-db
+      - DB_PORT=3306
+      - DB_USER=netflix_user
+      - DB_PASSWORD=1234
+      - DB_NAME=netflix_catalog
+    depends_on:
+      - netflix-db
+    networks:
+      - netflix-network
+      - db-network
+
+  netflix-db:
+    image: 058264527754.dkr.ecr.us-east-1.amazonaws.com/netflix_db
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_USER=netflix_user
+      - MYSQL_PASSWORD=1234
+      - MYSQL_DATABASE=netflix_catalog
+    volumes:
+      - netflix-db-data:/var/lib/mysql
+    networks:
+      - db-network
+
+volumes:
+  netflix-db-data:
+
+networks:
+  netflix-network:
+  db-network:
+EOF
+
+
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 058264527754.dkr.ecr.us-east-1.amazonaws.com
+
+
+docker-compose pull
+
+
+docker-compose up -d
+
+
+

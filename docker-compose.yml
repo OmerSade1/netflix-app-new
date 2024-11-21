@@ -1,0 +1,48 @@
+services:
+  netflix-frontend:
+    image: omersade/netflix_frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - MOVIE_CATALOG_SERVICE=http://netflix-catalog:8080
+    depends_on:
+      - netflix-catalog
+    networks:
+      - netflix-network
+
+  netflix-catalog:
+    image: omersade/netflix_catalog:v1
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=netflix-db
+      - DB_PORT=3306
+      - DB_USER=netflix_user
+      - DB_PASSWORD=1234
+      - DB_NAME=netflix_catalog
+    depends_on:
+      - netflix-db
+    networks:
+      - netflix-network
+      - db-network  # Additional network for DB communication
+
+  netflix-db:
+    image: netflix-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_USER=netflix_user
+      - MYSQL_PASSWORD=1234
+      - MYSQL_DATABASE=netflix_catalog
+    volumes:
+      - netflix-db-data:/var/lib/mysql
+    networks:
+      - db-network  # Isolated network for DB communication
+
+volumes:
+  netflix-db-data:
+
+networks:
+  netflix-network:
+  db-network:
+
