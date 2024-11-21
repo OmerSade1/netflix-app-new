@@ -40,7 +40,7 @@ jobs:
           curl -fsSL http://localhost:3000 || exit 1
 
       # Shut down services
-      - name: Shut Down Containers
-        if: always()
-        run: |
-          docker compose down
+     # - name: Shut Down Containers
+     #   if: always()
+      #  run: |
+        #  docker compose down
