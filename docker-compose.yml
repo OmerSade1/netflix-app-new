@@ -27,7 +27,7 @@ services:
       - db-network  # Additional network for DB communication
 
   netflix-db:
-    image: netflix-mysql
+    image: omersade/netflix_mysql:v1
     ports:
       - "3306:3306"
     environment:
