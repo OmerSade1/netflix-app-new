@@ -39,4 +39,11 @@ jobs:
         run: |
           curl -fsSL http://localhost:3000 || exit 1
 
+      # Keep the containers running after the curl check
+      - name: Keep Containers Running
+        run: |
+          echo "Keeping containers alive..."
+          tail -f /dev/null
+
+
       
