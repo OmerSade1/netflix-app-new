@@ -39,10 +39,68 @@ jobs:
         run: |
           curl -fsSL http://localhost:3000 || exit 1
 
+      # Clean up the containers
       - name: Clean up Containers
         run: |
-            echo "Stopping and removing containers..."
-            docker compose down
+          echo "Stopping and removing containers..."
+          docker compose down
+
+  push-to-ecr-and-deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      # Checkout the repository again in the new job
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Set up AWS CLI and ECR login
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Build and Tag Docker Images
+      - name: Build and Tag Docker Images
+        run: |
+          # Build and tag all images from secrets file
+          docker build -t ${{ secrets.IMAGE1_REPO_URI }}:latest -f NetflixFrontend/Dockerfile .
+          docker build -t ${{ secrets.IMAGE2_REPO_URI }}:latest -f NetflixMovieCatalog/Dockerfile .
+          docker build -t ${{ secrets.IMAGE3_REPO_URI }}:latest -f db/Dockerfile .
+
+      # Push Docker Images to ECR
+      - name: Push Docker Images to ECR
+        run: |
+          # Push all images from secrets file
+          docker push ${{ secrets.IMAGE1_REPO_URI }}:latest
+          docker push ${{ secrets.IMAGE2_REPO_URI }}:latest
+          docker push ${{ secrets.IMAGE3_REPO_URI }}:latest
+
+      # SSH into EC2 and deploy
+      - name: SSH into EC2 and deploy
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.EC2_PUBLIC_IP }}
+          username: ${{ secrets.EC2_USERNAME }}
+          script: |
+            echo "Pulling new Docker images from ECR..."
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.IMAGE1_REPO_URI }}
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.IMAGE2_REPO_URI }}
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.IMAGE3_REPO_URI }}
+            
+            # Pull and update all images
+            docker pull ${{ secrets.IMAGE1_REPO_URI }}:latest
+            docker pull ${{ secrets.IMAGE2_REPO_URI }}:latest
+            docker pull ${{ secrets.IMAGE3_REPO_URI }}:latest
+            
+            # Update and start containers
+            docker-compose up -d
+
 
 
       
