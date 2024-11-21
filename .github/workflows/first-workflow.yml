@@ -60,7 +60,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
@@ -85,7 +85,7 @@ jobs:
       - name: SSH into EC2 and deploy
         uses: appleboy/ssh-action@v0.1.0
         with:
-          host: ${{ secrets.EC2_PUBLIC_IP }}
+          host: 100.24.34.216
           username: ${{ secrets.EC2_USERNAME }}
           script: |
             echo "Pulling new Docker images from ECR..."
