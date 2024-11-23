@@ -27,12 +27,12 @@ jobs:
       
       - name: Build NetflixMovieCatalog Image
         run: |
-          docker build -t netflix-movie-catalog:latest -f NetflixMovieCatalog/Dockerfile .
+          docker build  ./NetflixMovieCatalog/ -t netflix-movie-catalog:latest
 
 
       - name: Build NetflixFrontend Image
         run: |
-          docker build -t netflix-frontend:latest -f NetflixFrontend/Dockerfile .
+          docker build ./NetflixFrontend/ -t netflix-frontend:latest
 
 
 
