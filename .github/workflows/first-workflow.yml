@@ -23,7 +23,7 @@ jobs:
       - name: Build DB Image
         run: |
           docker build -t netflix_db:latest -f db/Dockerfile .
-        working-directory: ./db
+        working-directory: ./netflix-app-new/db
       
       - name: Build NetflixMovieCatalog Image
         run: |
