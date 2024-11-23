@@ -1,11 +1,11 @@
 # Use an official Node.js runtime as a parent image
-FROM node:18
+FROM node:14
 
 # Set the working directory in the container
 WORKDIR /app
 
 # Copy package.json and package-lock.json first to leverage Docker cache
-COPY NetflixFrontend/package.json NetflixFrontend/package-lock.json ./ 
+COPY package*.json ./
 
 # Install dependencies
 RUN npm install
