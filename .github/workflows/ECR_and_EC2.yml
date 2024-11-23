@@ -69,7 +69,7 @@ jobs:
         run: |
           echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > private_key.pem
           chmod 600 private_key.pem
-          ssh -o StrictHostKeyChecking=no -t ec2-user@3.84.189.66 << EOF
+          ssh -i private_key.pem -o StrictHostKeyChecking=no ec2-user@3.84.189.66<< EOF
           # Install Docker and start service
           sudo amazon-linux-extras install docker -y
           sudo service docker start
@@ -148,3 +148,4 @@ jobs:
           # Start the containers
           docker-compose up -d
           EOF
+            shell: /usr/bin/bash -e {0}
