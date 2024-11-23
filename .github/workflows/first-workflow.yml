@@ -21,7 +21,8 @@ jobs:
       # Build Docker images one by one
       - name: Build NetflixFrontend Image
         run: |
-          docker build -t netflix-frontend:latest -f NetflixFrontend/Dockerfile .
+          docker build --no-cache -t netflix-frontend:latest -f NetflixFrontend/Dockerfile .
+
 
       - name: Build NetflixMovieCatalog Image
         run: |
