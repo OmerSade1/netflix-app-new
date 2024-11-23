@@ -85,7 +85,7 @@ jobs:
       - name: SSH into EC2 and deploy
         uses: appleboy/ssh-action@v0.1.0
         with:
-          host: 100.24.34.216
+          host: 44.211.72.236
           username: ${{ secrets.EC2_USERNAME }}
           script: |
             echo "Pulling new Docker images from ECR..."
