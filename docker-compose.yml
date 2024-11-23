@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   netflix-frontend:
-    image: omersade/netflix_frontend:${VERSION_TAG}
+    image: omersade/netflix-frontend:${VERSION_TAG}
     ports:
       - "3000:3000"
     environment:
@@ -13,7 +13,7 @@ services:
       - netflix-network
 
   netflix-catalog:
-    image: omersade/netflix_catalog:${VERSION_TAG}
+    image: omersade/netflix-movie-catalog:${VERSION_TAG}
     ports:
       - "8080:8080"
     environment:
