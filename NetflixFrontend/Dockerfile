@@ -1,25 +1,26 @@
-# Use the official Node.js image as the base image
+# Use Node.js base image
 FROM node:16
 
-# Set the working directory in the container
+# Set working directory
 WORKDIR /app
 
-# Copy the entire project into the container's working directory
-COPY . .
-
-# Ensure proper file permissions for all files in /app (including pages directory)
-RUN chmod -R 755 /app
+# Copy package.json and package-lock.json
+COPY NetflixFrontend/package*.json ./
 
 # Install the application dependencies
 RUN npm install
 
-# Build the application
-RUN npm run build
+# Copy the rest of your application code
+COPY . .
 
-# Expose the port your app runs on (default for Next.js is 3000)
+# Set appropriate permissions
+RUN chmod -R 755 /app
+
+# Expose the application port
 EXPOSE 3000
 
-# Command to start the app
+# Command to run your application
 CMD ["npm", "start"]
+
 
 
