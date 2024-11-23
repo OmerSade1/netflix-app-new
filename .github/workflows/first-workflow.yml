@@ -22,7 +22,7 @@ jobs:
 
       - name: Build DB Image
         run: |
-          docker build -t db:latest -f db/Dockerfile .
+          docker build -t netflix_db:latest -f db/Dockerfile .
       
       - name: Build NetflixMovieCatalog Image
         run: |
@@ -31,7 +31,7 @@ jobs:
 
       - name: Build NetflixFrontend Image
         run: |
-          docker build --no-cache -t netflix-frontend:latest -f NetflixFrontend/Dockerfile .
+          docker build -t netflix-frontend:latest -f NetflixFrontend/Dockerfile .
 
 
 

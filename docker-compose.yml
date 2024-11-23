@@ -1,6 +1,6 @@
 services:
   netflix-frontend:
-    image: omersade/netflix_frontend:latest
+    image: netflix_frontend:latest
     ports:
       - "3000:3000"
     environment:
@@ -11,7 +11,7 @@ services:
       - netflix-network
 
   netflix-catalog:
-    image: omersade/netflix_catalog:v1
+    image: netflix_catalog:latest
     ports:
       - "8080:8080"
     environment:
@@ -27,7 +27,7 @@ services:
       - db-network  # Additional network for DB communication
 
   netflix-db:
-    image: omersade/netflix_mysql:v1
+    image: netflix_db:latest
     ports:
       - "3306:3306"
     environment:
