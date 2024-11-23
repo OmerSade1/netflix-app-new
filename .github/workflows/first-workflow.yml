@@ -1,5 +1,3 @@
-name: Docker Compose CI/CD
-
 on:
   push:
     branches:
@@ -18,28 +16,45 @@ jobs:
       - name: Set up Docker
         uses: docker/setup-buildx-action@v2
 
-      # Build Docker images one by one
+      # Log in to Docker Hub
+      - name: Docker Login
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build DB Image
+      # Define version tag from GitHub run number
+      - name: Set Version Tag
         run: |
-          docker build ./db/ -t netflix_db:latest
-    
-      
-      - name: Build NetflixMovieCatalog Image
+          VERSION_TAG="v${{ github.run_number }}"
+          echo "VERSION_TAG=${VERSION_TAG}" >> $GITHUB_ENV
+
+      # Build and push DB image
+      - name: Build and Push DB Image
         run: |
-          docker build  ./NetflixMovieCatalog/ -t netflix-movie-catalog:latest
+          docker build ./db/ -t netflix_db:${{ env.VERSION_TAG }}
+          docker tag netflix_db:${{ env.VERSION_TAG }} omersade/netflix_db:${{ env.VERSION_TAG }}
+          docker push omersade/netflix_db:${{ env.VERSION_TAG }}
 
-
-      - name: Build NetflixFrontend Image
+      # Build and push NetflixMovieCatalog image
+      - name: Build and Push NetflixMovieCatalog Image
         run: |
-          docker build ./NetflixFrontend/ -t netflix-frontend:latest
+          docker build ./NetflixMovieCatalog/ -t netflix-movie-catalog:${{ env.VERSION_TAG }}
+          docker tag netflix-movie-catalog:${{ env.VERSION_TAG }} omersade/netflix-movie-catalog:${{ env.VERSION_TAG }}
+          docker push omersade/netflix-movie-catalog:${{ env.VERSION_TAG }}
 
+      # Build and push NetflixFrontend image
+      - name: Build and Push NetflixFrontend Image
+        run: |
+          docker build ./NetflixFrontend/ -t netflix-frontend:${{ env.VERSION_TAG }}
+          docker tag netflix-frontend:${{ env.VERSION_TAG }} omersade/netflix-frontend:${{ env.VERSION_TAG }}
+          docker push omersade/netflix-frontend:${{ env.VERSION_TAG }}
 
-
-      # Start containers
+      # Start containers using the versioned tags
       - name: Start Containers
         run: |
-          docker compose up -d
+          docker-compose pull  # Pull the versioned images
+          docker-compose up -d
 
       # Wait for services to be healthy
       - name: Wait for Services
@@ -56,63 +71,10 @@ jobs:
       - name: Clean up Containers
         run: |
           echo "Stopping and removing containers..."
-          docker compose down
+          docker-compose down
 
-  push-to-ecr-and-deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-test
 
-    steps:
-      # Checkout the repository again in the new job
-      - name: Checkout Code
-        uses: actions/checkout@v3
 
-      # Set up AWS CLI and ECR login
-      - name: Set up AWS CLI
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Log in to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
-
-      # Tag and Push Docker Images to ECR
-      - name: Push NetflixFrontend Image to ECR
-        run: |
-          docker tag netflix-frontend:latest ${{ secrets.IMAGE1_REPO_URI }}:latest
-          docker push ${{ secrets.IMAGE1_REPO_URI }}:latest
-
-      - name: Push NetflixMovieCatalog Image to ECR
-        run: |
-          docker tag netflix-movie-catalog:latest ${{ secrets.IMAGE2_REPO_URI }}:latest
-          docker push ${{ secrets.IMAGE2_REPO_URI }}:latest
-
-      - name: Push DB Image to ECR
-        run: |
-          docker tag db:latest ${{ secrets.IMAGE3_REPO_URI }}:latest
-          docker push ${{ secrets.IMAGE3_REPO_URI }}:latest
-
-      # SSH into EC2 and deploy
-      - name: SSH into EC2 and deploy
-        uses: appleboy/ssh-action@v0.1.0
-        with:
-          host: 44.211.72.236
-          username: ${{ secrets.EC2_USERNAME }}
-          script: |
-            echo "Pulling new Docker images from ECR..."
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.IMAGE1_REPO_URI }}
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.IMAGE2_REPO_URI }}
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.IMAGE3_REPO_URI }}
-            
-            # Pull and update all images
-            docker pull ${{ secrets.IMAGE1_REPO_URI }}:latest
-            docker pull ${{ secrets.IMAGE2_REPO_URI }}:latest
-            docker pull ${{ secrets.IMAGE3_REPO_URI }}:latest
-            
-            # Update and start containers
-            docker-compose up -d
 
 
 
