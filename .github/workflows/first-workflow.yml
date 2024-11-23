@@ -19,18 +19,21 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       # Build Docker images one by one
+
+      - name: Build DB Image
+        run: |
+          docker build -t db:latest -f db/Dockerfile .
+      
+      - name: Build NetflixMovieCatalog Image
+        run: |
+          docker build -t netflix-movie-catalog:latest -f NetflixMovieCatalog/Dockerfile .
+
+
       - name: Build NetflixFrontend Image
         run: |
           docker build --no-cache -t netflix-frontend:latest -f NetflixFrontend/Dockerfile .
 
 
-      - name: Build NetflixMovieCatalog Image
-        run: |
-          docker build -t netflix-movie-catalog:latest -f NetflixMovieCatalog/Dockerfile .
-
-      - name: Build DB Image
-        run: |
-          docker build -t db:latest -f db/Dockerfile .
 
       # Start containers
       - name: Start Containers
