@@ -67,7 +67,7 @@ jobs:
       # Deploy to EC2
       - name: Deploy to EC2
         run: |
-          ssh -i "${{ secrets.EC2_SSH_KEY }}" ec2-user@34.226.147.117 << EOF
+          ssh ec2-user@98.81.198.0 << EOF
           # Install Docker and start service
           sudo amazon-linux-extras install docker -y
           sudo service docker start
