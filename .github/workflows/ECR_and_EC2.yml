@@ -67,7 +67,9 @@ jobs:
       # Deploy to EC2
       - name: Deploy to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -t ec2-user@98.81.198.0 << EOF
+          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+          ssh -o StrictHostKeyChecking=no -t ec2-user@3.85.20.184 << EOF
           # Install Docker and start service
           sudo amazon-linux-extras install docker -y
           sudo service docker start
