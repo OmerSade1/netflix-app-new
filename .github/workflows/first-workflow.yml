@@ -29,6 +29,10 @@ jobs:
           VERSION_TAG="v${{ github.run_number }}"
           echo "VERSION_TAG=${VERSION_TAG}" >> $GITHUB_ENV
 
+      # Debug version tag (optional, for troubleshooting)
+      - name: Debug Version Tag
+        run: echo "VERSION_TAG=${{ env.VERSION_TAG }}"
+
       # Build and push DB image
       - name: Build and Push DB Image
         run: |
@@ -50,13 +54,12 @@ jobs:
           docker tag netflix-frontend:${{ env.VERSION_TAG }} omersade/netflix-frontend:${{ env.VERSION_TAG }}
           docker push omersade/netflix-frontend:${{ env.VERSION_TAG }}
 
+      # Install Docker Compose
       - name: Install Docker Compose
         run: |
           sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
-  
-        # Start containers using the versioned tags
-        
+
       # Start containers using the versioned tags
       - name: Start Containers
         run: |
@@ -67,7 +70,7 @@ jobs:
       - name: Wait for Services
         run: |
           echo "Waiting for services to be ready..."
-          sleep 10 # Adjust the sleep time as needed for your services to start
+          sleep 10  # Adjust the sleep time as needed for your services to start
 
       # Perform a basic health check using curl
       - name: Perform Curl Check
@@ -79,6 +82,7 @@ jobs:
         run: |
           echo "Stopping and removing containers..."
           docker-compose down
+
 
 
 
