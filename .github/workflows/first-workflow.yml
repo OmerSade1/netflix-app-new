@@ -18,10 +18,18 @@ jobs:
       - name: Set up Docker
         uses: docker/setup-buildx-action@v2
 
-      # Build Docker images
-      - name: Build Docker Images
+      # Build Docker images one by one
+      - name: Build NetflixFrontend Image
         run: |
-          docker compose build
+          docker build -t netflix-frontend:latest -f NetflixFrontend/Dockerfile .
+
+      - name: Build NetflixMovieCatalog Image
+        run: |
+          docker build -t netflix-movie-catalog:latest -f NetflixMovieCatalog/Dockerfile .
+
+      - name: Build DB Image
+        run: |
+          docker build -t db:latest -f db/Dockerfile .
 
       # Start containers
       - name: Start Containers
@@ -65,20 +73,20 @@ jobs:
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Build and Tag Docker Images
-      - name: Build and Tag Docker Images
+      # Tag and Push Docker Images to ECR
+      - name: Push NetflixFrontend Image to ECR
         run: |
-          # Build and tag all images from secrets file
-          docker build -t ${{ secrets.IMAGE1_REPO_URI }}:latest -f NetflixFrontend/Dockerfile .
-          docker build -t ${{ secrets.IMAGE2_REPO_URI }}:latest -f NetflixMovieCatalog/Dockerfile .
-          docker build -t ${{ secrets.IMAGE3_REPO_URI }}:latest -f db/Dockerfile .
-
-      # Push Docker Images to ECR
-      - name: Push Docker Images to ECR
-        run: |
-          # Push all images from secrets file
+          docker tag netflix-frontend:latest ${{ secrets.IMAGE1_REPO_URI }}:latest
           docker push ${{ secrets.IMAGE1_REPO_URI }}:latest
+
+      - name: Push NetflixMovieCatalog Image to ECR
+        run: |
+          docker tag netflix-movie-catalog:latest ${{ secrets.IMAGE2_REPO_URI }}:latest
           docker push ${{ secrets.IMAGE2_REPO_URI }}:latest
+
+      - name: Push DB Image to ECR
+        run: |
+          docker tag db:latest ${{ secrets.IMAGE3_REPO_URI }}:latest
           docker push ${{ secrets.IMAGE3_REPO_URI }}:latest
 
       # SSH into EC2 and deploy
