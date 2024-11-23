@@ -1,7 +1,7 @@
 FROM mysql:5.7
 
 # Copy the init.sql script to the Docker entrypoint directory
-COPY db/init.sql /docker-entrypoint-initdb.d/
+COPY init.sql /docker-entrypoint-initdb.d/
 
 # Set environment variables for MySQL
 ENV MYSQL_ROOT_PASSWORD=1234

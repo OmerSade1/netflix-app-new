@@ -2,8 +2,6 @@ version: '3.8'
 
 services:
   netflix-frontend:
-    build:
-      context: ./netflix-frontend  # Specify the context for building the frontend image
     image: netflix_frontend:latest
     ports:
       - "3000:3000"
@@ -15,8 +13,6 @@ services:
       - netflix-network
 
   netflix-catalog:
-    build:
-      context: ./netflix-catalog  # Specify the context for building the catalog image
     image: netflix_catalog:latest
     ports:
       - "8080:8080"

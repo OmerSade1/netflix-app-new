@@ -1,25 +1,20 @@
-# Use Node.js base image
-FROM node:16
-
-# Set working directory
+# Use Node.js as the base image
+FROM node:14
+# Create and set the working directory
 WORKDIR /app
-
-# Copy package.json and package-lock.json
-COPY NetflixFrontend/package*.json ./
-
-# Install the application dependencies
+# Copy package.json and package-lock.json to install dependencies
+COPY package*.json ./
+# Install dependencies
 RUN npm install
-
-# Copy the rest of your application code
+# Copy the application code
 COPY . .
-
-# Set appropriate permissions
-RUN chmod -R 755 /app
-
-# Expose the application port
+# Build the application
+RUN npm run build
+# Expose the port your app runs on
 EXPOSE 3000
-
-# Command to run your application
+# Set environment variable for the movie catalog service
+ENV MOVIE_CATALOG_SERVICE=http://localhost:8080
+# Start the application
 CMD ["npm", "start"]
 
 
