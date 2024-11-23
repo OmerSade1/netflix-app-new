@@ -1,0 +1,151 @@
+name: CI/CD Workflow for ECR and EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Set up Docker
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      # Configure AWS CLI
+      - name: Configure AWS CLI
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region ${{ secrets.AWS_REGION }}
+
+      # Log in to ECR
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
+
+      # Define version tag from GitHub run number
+      - name: Set Version Tag
+        run: |
+          VERSION_TAG="v${{ github.run_number }}"
+          echo "VERSION_TAG=${VERSION_TAG}" >> $GITHUB_ENV
+
+      # Build and tag DB image
+      - name: Build and Tag DB Image
+        run: |
+          ECR_REPO="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/netflix_db"
+          docker build ./db/ -t netflix_db:${{ env.VERSION_TAG }}
+          docker tag netflix_db:${{ env.VERSION_TAG }} ${ECR_REPO}:${{ env.VERSION_TAG }}
+
+      # Build and tag NetflixMovieCatalog image
+      - name: Build and Tag NetflixMovieCatalog Image
+        run: |
+          ECR_REPO="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/netflix-movie-catalog"
+          docker build ./NetflixMovieCatalog/ -t netflix-movie-catalog:${{ env.VERSION_TAG }}
+          docker tag netflix-movie-catalog:${{ env.VERSION_TAG }} ${ECR_REPO}:${{ env.VERSION_TAG }}
+
+      # Build and tag NetflixFrontend image
+      - name: Build and Tag NetflixFrontend Image
+        run: |
+          ECR_REPO="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/netflix-frontend"
+          docker build ./NetflixFrontend/ -t netflix-frontend:${{ env.VERSION_TAG }}
+          docker tag netflix-frontend:${{ env.VERSION_TAG }} ${ECR_REPO}:${{ env.VERSION_TAG }}
+
+      # Push all images to ECR
+      - name: Push Images to ECR
+        run: |
+          docker push "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/netflix_db:${{ env.VERSION_TAG }}"
+          docker push "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/netflix-movie-catalog:${{ env.VERSION_TAG }}"
+          docker push "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/netflix-frontend:${{ env.VERSION_TAG }}"
+
+      # Deploy to EC2
+      - name: Deploy to EC2
+        run: |
+          ssh -i "${{ secrets.EC2_SSH_KEY }}" ec2-user@34.226.147.117 << EOF
+          # Install Docker and start service
+          sudo amazon-linux-extras install docker -y
+          sudo service docker start
+          sudo usermod -a -G docker ec2-user
+
+          # Install dependencies for Docker Compose
+          sudo yum install -y curl jq
+
+          # Install Docker Compose
+          DOCKER_COMPOSE_VERSION=\$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
+          sudo curl -L "https://github.com/docker/compose/releases/download/\$DOCKER_COMPOSE_VERSION/docker-compose-\$(uname -s)-\$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+          # Install AWS CLI (if not already installed)
+          sudo yum install -y aws-cli
+
+          # Log in to ECR
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
+
+          # Create Docker Compose app directory
+          mkdir -p /home/ec2-user/docker-compose-app
+          cd /home/ec2-user/docker-compose-app
+
+          # Create docker-compose.yml file dynamically
+          cat << COMPOSE > docker-compose.yml
+          version: '3.8'
+          services:
+            netflix-frontend:
+              image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/netflix-frontend:${{ env.VERSION_TAG }}
+              ports:
+                - "3000:3000"
+              environment:
+                - MOVIE_CATALOG_SERVICE=http://netflix-movie-catalog:8080
+              depends_on:
+                - netflix-movie-catalog
+              networks:
+                - netflix-network
+            netflix-movie-catalog:
+              image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/netflix-movie-catalog:${{ env.VERSION_TAG }}
+              ports:
+                - "8080:8080"
+              environment:
+                - DB_HOST=netflix-db
+                - DB_PORT=3306
+                - DB_USER=netflix_user
+                - DB_PASSWORD=1234
+                - DB_NAME=netflix_catalog
+              depends_on:
+                - netflix-db
+              networks:
+                - netflix-network
+                - db-network
+            netflix-db:
+              image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/netflix_db:${{ env.VERSION_TAG }}
+              ports:
+                - "3306:3306"
+              environment:
+                - MYSQL_USER=netflix_user
+                - MYSQL_PASSWORD=1234
+                - MYSQL_DATABASE=netflix_catalog
+              volumes:
+                - netflix-db-data:/var/lib/mysql
+              networks:
+                - db-network
+          volumes:
+            netflix-db-data:
+          networks:
+            netflix-network:
+            db-network:
+          COMPOSE
+
+          # Stop existing containers and pull new images
+          docker-compose down
+          docker-compose pull
+
+          # Start the containers
+          docker-compose up -d
+          EOF
+
+        
+
