@@ -5,7 +5,7 @@ FROM node:14
 WORKDIR /app
 
 # Copy package.json and package-lock.json first to leverage Docker cache
-COPY package.json package-lock.json ./
+COPY NetflixFrontend/package.json NetflixFrontend/package-lock.json ./ 
 
 # Install dependencies
 RUN npm install
