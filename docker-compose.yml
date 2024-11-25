@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   netflix-frontend:
     image: omersade/netflix-frontend:${VERSION_TAG}
